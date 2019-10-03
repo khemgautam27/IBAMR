@@ -628,6 +628,12 @@ HierarchyIntegrator::getCurrentTimeStepSize() const
 } // getCurrentTimeStepSize
 
 void
+HierarchyIntegrator::setSkipEnforceNumCycles(const bool skip_enforce_num_cycles)
+{
+    d_skip_enforce_num_cycles = skip_enforce_num_cycles;
+}
+
+void
 HierarchyIntegrator::preprocessIntegrateHierarchy(const double current_time,
                                                   const double new_time,
                                                   const int num_cycles)
@@ -648,8 +654,8 @@ HierarchyIntegrator::integrateHierarchy(const double current_time, const double 
     ++d_current_cycle_num;
 #if !defined(NDEBUG)
     TBOX_ASSERT(IBTK::abs_equal_eps(d_current_dt, new_time - current_time));
-    TBOX_ASSERT(d_current_cycle_num == cycle_num);
-    TBOX_ASSERT(d_current_cycle_num < d_current_num_cycles);
+    TBOX_ASSERT(d_skip_enforce_num_cycles || d_current_cycle_num == cycle_num);
+    TBOX_ASSERT(d_skip_enforce_num_cycles || d_current_cycle_num < d_current_num_cycles);
 #else
     NULL_USE(current_time);
     NULL_USE(new_time);
@@ -664,8 +670,8 @@ HierarchyIntegrator::skipCycle(const double current_time, const double new_time,
     ++d_current_cycle_num;
 #if !defined(NDEBUG)
     TBOX_ASSERT(IBTK::abs_equal_eps(d_current_dt, new_time - current_time));
-    TBOX_ASSERT(d_current_cycle_num == cycle_num);
-    TBOX_ASSERT(d_current_cycle_num < d_current_num_cycles);
+    TBOX_ASSERT(d_skip_enforce_num_cycles || d_current_cycle_num == cycle_num);
+    TBOX_ASSERT(d_skip_enforce_num_cycles || d_current_cycle_num < d_current_num_cycles);
 #else
     NULL_USE(current_time);
     NULL_USE(new_time);
@@ -682,8 +688,8 @@ HierarchyIntegrator::postprocessIntegrateHierarchy(const double current_time,
 {
 #if !defined(NDEBUG)
     TBOX_ASSERT(IBTK::abs_equal_eps(d_current_dt, new_time - current_time));
-    TBOX_ASSERT(num_cycles == d_current_num_cycles);
-    TBOX_ASSERT(d_current_cycle_num + 1 == d_current_num_cycles);
+    TBOX_ASSERT(d_skip_enforce_num_cycles || num_cycles == d_current_num_cycles);
+    TBOX_ASSERT(d_skip_enforce_num_cycles || d_current_cycle_num + 1 == d_current_num_cycles);
 #else
     NULL_USE(current_time);
     NULL_USE(new_time);
