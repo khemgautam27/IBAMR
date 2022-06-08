@@ -360,69 +360,10 @@ ENDIF()
 #
 MESSAGE(STATUS "")
 MESSAGE(STATUS "Setting up SAMRAI")
-SET(_samrai_library_suffixes "algs" "appu" "geom" "hier"
-  "math_std" "mesh" "pdat_std" "solv" "xfer")
+FIND_PACKAGE(SAMRAI REQUIRED)
+MESSAGE(STATUS "Found SAMRAI ${SAMRAI_VERSION} at ${SAMRAI_ROOT}")
 
-# samrai version info:
-FILE(STRINGS "${SAMRAI_ROOT}/include/SAMRAI_config.h" SAMRAI_VERSION_MAJOR_LINE
-  REGEX "#define.*SAMRAI_VERSION_MAJOR")
-STRING(REGEX REPLACE "^.*SAMRAI_VERSION_MAJOR.* ([0-9]+).*" "\\1"
-  SAMRAI_VERSION_MAJOR "${SAMRAI_VERSION_MAJOR_LINE}"
-  )
-FILE(STRINGS "${SAMRAI_ROOT}/include/SAMRAI_config.h" SAMRAI_VERSION_MINOR_LINE
-  REGEX "#define.*SAMRAI_VERSION_MINOR")
-STRING(REGEX REPLACE "^.*SAMRAI_VERSION_MINOR.* ([0-9]+).*" "\\1"
-  SAMRAI_VERSION_MINOR "${SAMRAI_VERSION_MINOR_LINE}"
-  )
-FILE(STRINGS "${SAMRAI_ROOT}/include/SAMRAI_config.h" SAMRAI_VERSION_PATCHLEVEL_LINE
-  REGEX "#define.*SAMRAI_VERSION_PATCHLEVEL")
-STRING(REGEX REPLACE "^.*SAMRAI_VERSION_PATCHLEVEL.* ([0-9]+).*" "\\1"
-  SAMRAI_VERSION_PATCHLEVEL "${SAMRAI_VERSION_PATCHLEVEL_LINE}"
-  )
-SET(SAMRAI_VERSION_STRING "${SAMRAI_VERSION_MAJOR}.${SAMRAI_VERSION_MINOR}\
-.${SAMRAI_VERSION_PATCHLEVEL}")
-MESSAGE(STATUS "Found SAMRAI ${SAMRAI_VERSION_STRING} at ${SAMRAI_ROOT}")
-
-# samrai libs:
-SET(SAMRAI_INCLUDE_DIRS "${SAMRAI_ROOT}/include")
-SET(SAMRAI2d_LIBRARIES)
-SET(SAMRAI3d_LIBRARIES)
-ADD_LIBRARY(SAMRAI UNKNOWN IMPORTED)
-FIND_LIBRARY(SAMRAI_path SAMRAI REQUIRED HINTS "${SAMRAI_ROOT}/lib")
-LIST(APPEND SAMRAI2d_LIBRARIES ${SAMRAI_path})
-LIST(APPEND SAMRAI3d_LIBRARIES ${SAMRAI_path})
-
-FOREACH(_d ${IBAMR_DIMENSIONS})
-  FOREACH(_suffix ${_samrai_library_suffixes})
-    SET(_lib_name "SAMRAI${_d}d_${_suffix}")
-    ADD_LIBRARY( ${_lib_name} UNKNOWN IMPORTED)
-
-    FIND_LIBRARY("${_lib_name}_path" ${_lib_name} REQUIRED
-      HINTS "${SAMRAI_ROOT}/lib")
-    IF("${${_lib_name}_path}" STREQUAL "${_lib_name}-NOTFOUND")
-      MESSAGE(FATAL_ERROR
-        "Unable to find required library ${_lib_name} in directory ${SAMRAI_ROOT}/lib")
-    ENDIF()
-
-    LIST(APPEND "SAMRAI${_d}d_LIBRARIES" "${${_lib_name}_path}")
-  ENDFOREACH()
-ENDFOREACH()
-
-# sanity check:
-SET(CMAKE_REQUIRED_INCLUDES ${SAMRAI_INCLUDE_DIRS})
-CHECK_CXX_SOURCE_COMPILES(
-  "
-  #include <SAMRAI_config.h>
-  #ifndef HAVE_MPI
-  #error
-  #endif
-  int main() {}
-  "
-  SAMRAI_WITH_MPI)
-SET(CMAKE_REQUIRED_INCLUDES "")
-IF(NOT ${SAMRAI_WITH_MPI})
-  MESSAGE(FATAL_ERROR "IBAMR requires that SAMRAI is built with MPI support.")
-ENDIF()
+# TODO: verify that SAMRAI uses MPI here
 
 #
 # PETSc:
@@ -1001,7 +942,7 @@ MACRO(IBAMR_PROCESS_M4)
   GET_FILENAME_COMPONENT(_out_directory "${CMAKE_CURRENT_BINARY_DIR}/${arg_NAME}.f" DIRECTORY)
   FILE(MAKE_DIRECTORY ${_out_directory})
 
-  SET(_samrai_fortdir ${SAMRAI_ROOT}/include)
+  SET(_samrai_fortdir ${SAMRAI_ROOT}/include/SAMRAI/pdat/fortran/)
   SET(_current_srcdir ${_in_directory})
   SET(_top_srcdir ${CMAKE_SOURCE_DIR})
   SET(_input "${CMAKE_CURRENT_SOURCE_DIR}/${arg_NAME}.m4")
@@ -1090,7 +1031,7 @@ FUNCTION(IBAMR_SETUP_TARGET_LIBRARY target_library)
   ENDIF()
   # SAMRAI is also underlinked and depends on HDF5:
   TARGET_INCLUDE_DIRECTORIES(${target_library} PUBLIC ${SAMRAI_INCLUDE_DIRS})
-  FOREACH(_lib ${SAMRAI${_d}d_LIBRARIES})
+  FOREACH(_lib ${SAMRAI_LIBRARIES})
     TARGET_LINK_LIBRARIES(${target_library} PUBLIC ${_lib})
   ENDFOREACH()
   # HDF5:
